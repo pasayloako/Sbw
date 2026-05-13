@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        
+        button.danger {
+            background: #e74c3c;
+        }
+        
+        button.success {
+            background: #27ae60;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .user-list {
+            margin-top: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .user-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .logs {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        
+        .login-form {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+        
+        h2, h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loginSection" class="container">
+        <div class="card login-form">
+            <h2>Admin Login</h2>
+            <div id="loginAlert"></div>
+            <input type="text" id="adminUsername" placeholder="Username">
+            <input type="password" id="adminPassword" placeholder="Password">
+            <button onclick="adminLogin()" style="width: 100%;">Login</button>
+            <p style="margin-top: 15px; text-align: center; color: #666;">
+                <a href="/" style="color: #667eea;">← Back to User Login</a>
+            </p>
+        </div>
+    </div>
+    
+    <div id="adminSection" class="container" style="display: none;">
+        <div class="header">
+            <h1>👑 Admin Dashboard</h1>
+            <button onclick="logout()">Logout</button>
+        </div>
+        
+        <div class="card">
+            <div class="grid-2">
+                <div>
+                    <h3>Grant Access</h3>
+                    <div id="adminAlert"></div>
+                    <input type="text" id="grantUsername" placeholder="Username">
+                    <select id="grantDuration">
+                        <option value="1 day">1 day (Trial)</option>
+                        <option value="3 days">3 days (Trial)</option>
+                        <option value="7 days">7 days (Trial)</option>
+                        <option value="1 month">1 month (Subscription)</option>
+                        <option value="1 year">1 year (Subscription)</option>
+                        <option value="lifetime">Lifetime</option>
+                    </select>
+                    <select id="grantUsage">
+                        <option value="1 test">1 test only</option>
+                        <option value="2 tests">2 tests only</option>
+                        <option value="3 tests">3 tests only</option>
+                        <option value="unlimited">Unlimited</option>
+                    </select>
+                    <button onclick="grantAccess()" class="success">Grant Access</button>
+                </div>
+                
+                <div>
+                    <h3>Revoke Access</h3>
+                    <input type="text" id="revokeUsername" placeholder="Username">
+                    <button onclick="revokeAccess()" class="danger">Revoke Access</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Users & Permissions</h3>
+            <div id="usersList" class="user-list"></div>
+            <button onclick="loadUsers()" style="margin-top: 10px;">Refresh Users</button>
+        </div>
+        
+        <div class="card">
+            <h3>Usage Logs</h3>
+            <div id="logsContent" class="logs"></div>
+            <button onclick="loadLogs()" style="margin-top: 10px;">Refresh Logs</button>
+        </div>
+    </div>
+    
+    <script>
+        async function adminLogin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            try {
+                const response = await fetch('/api/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('adminSection').style.display = 'block';
+                    loadUsers();
+                    loadLogs();
+                } else {
+                    showLoginAlert('Invalid credentials');
+                }
+            } catch (error) {
+                showLoginAlert('Login failed');
+            }
+        }
+        
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('adminSection').style.display = 'none';
+            document.getElementById('adminUsername').value = '';
+            document.getElementById('adminPassword').value = '';
+        }
+        
+        async function grantAccess() {
+            const username = document.getElementById('grantUsername').value;
+            const duration = document.getElementById('grantDuration').value;
+            const usageLimit = document.getElementById('grantUsage').value;
+            
+            if (!username) {
+                showAlert('adminAlert', 'Please enter username', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/grant-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, duration, usage_limit: usageLimit })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('adminAlert', data.message, 'success');
+                    loadUsers();
+                    document.getElementById('grantUsername').value = '';
+                } else {
+                    showAlert('adminAlert', data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('adminAlert', 'Failed to grant access', 'error');
+            }
+        }
+        
+        async function revokeAccess() {
+            const username = document.getElementById('revokeUsername').value;
+            
+            if (!username) {
+                showAlert('adminAlert', 'Please enter username', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/revoke-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('adminAlert', data.message, 'success');
+                    loadUsers();
+                    document.getElementById('revokeUsername').value = '';
+                } else {
+                    showAlert('adminAlert', data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('adminAlert', 'Failed to revoke access', 'error');
+            }
+        }
+        
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+                
+                if (data.success && data.users) {
+                    const usersHtml = data.users.map(user => `
+                        <div class="user-item">
+                            <strong>👤 ${user.username}</strong><br>
+                            Duration: ${user.duration || 'No access'}<br>
+                            Usage: ${user.usage_count || 0} / ${user.usage_limit === -1 ? 'Unlimited' : (user.usage_limit || 0)}<br>
+                            Expires: ${user.expiry_date ? new Date(user.expiry_date).toLocaleString() : 'N/A'}<br>
+                            Status: ${user.is_active ? '<span class="status-badge status-active">✅ Active</span>' : '<span class="status-badge status-expired">❌ Expired/Revoked</span>'}
+                        </div>
+                    `).join('');
+                    document.getElementById('usersList').innerHTML = usersHtml || '<p>No users found</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+        
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/admin/logs');
+                const data = await response.json();
+                
+                if (data.success && data.logs) {
+                    const logsHtml = data.logs.map(log => `
+                        <div class="log-entry">
+                            [${new Date(log.timestamp).toLocaleString()}] ${log.username} - ${log.action}
+                        </div>
+                    `).join('');
+                    document.getElementById('logsContent').innerHTML = logsHtml || '<p>No logs found</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load logs:', error);
+            }
+        }
+        
+        function showAlert(elementId, message, type) {
+            const alertDiv = document.getElementById(elementId);
+            alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 3000);
+        }
+        
+        function showLoginAlert(message) {
+            const alertDiv = document.getElementById('loginAlert');
+            alertDiv.innerHTML = `<div class="alert alert-error">${message}</div>`;
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
