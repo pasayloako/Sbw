@@ -72,6 +72,14 @@
             background: #229954;
         }
         
+        button.primary {
+            background: #3498db;
+        }
+        
+        button.primary:hover {
+            background: #2980b9;
+        }
+        
         .card {
             background: white;
             border-radius: 10px;
@@ -80,11 +88,11 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        .login-form, .admin-panel, .user-panel {
+        .user-panel, .admin-panel {
             display: none;
         }
         
-        .login-form.active, .admin-panel.active, .user-panel.active {
+        .user-panel.active, .admin-panel.active {
             display: block;
         }
         
@@ -136,6 +144,11 @@
         .status-expired {
             background: #f8d7da;
             color: #721c24;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
         }
         
         .alert {
@@ -192,6 +205,35 @@
             font-family: monospace;
         }
         
+        .access-card {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .access-granted {
+            border-left: 4px solid #27ae60;
+        }
+        
+        .access-denied {
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .usage-bar {
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .usage-fill {
+            background: #27ae60;
+            color: white;
+            padding: 5px;
+            text-align: center;
+            font-size: 12px;
+            transition: width 0.3s;
+        }
+        
         @media (max-width: 768px) {
             .grid-2 {
                 grid-template-columns: 1fr;
@@ -202,50 +244,60 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Access Management System</h1>
+            <h1>🎯 Access Management System</h1>
             <div class="user-info" id="userInfo">
                 <span id="usernameDisplay"></span>
                 <button onclick="logout()" id="logoutBtn" style="display:none">Logout</button>
+                <button onclick="showLoginModal()" id="loginBtn" style="display:none">Switch User</button>
             </div>
         </div>
         
-        <!-- Login Form -->
-        <div id="loginForm" class="login-form active card">
-            <h2>Login</h2>
-            <div id="loginAlert"></div>
-            <input type="text" id="loginUsername" placeholder="Username" required>
-            <input type="password" id="loginPassword" placeholder="Password">
-            <button onclick="login()">Login</button>
-            <p style="margin-top: 15px; color: #666; font-size: 12px;">Admin: admin / admin123</p>
-        </div>
-        
-        <!-- User Panel -->
-        <div id="userPanel" class="user-panel">
-            <div class="card">
-                <h2>Welcome, <span id="welcomeUsername"></span>!</h2>
-                <div id="accessStatus" class="alert alert-info"></div>
-                <div id="userPermissions"></div>
+        <!-- Main User Access Form -->
+        <div id="userPanel" class="user-panel active">
+            <div class="card" id="accessCheckCard">
+                <h2>🔐 Check Your Access</h2>
+                <p style="margin-bottom: 20px; color: #666;">Enter your username to check if you have access to the service</p>
+                <div id="userAlert"></div>
+                <div class="form-group">
+                    <label>Username:</label>
+                    <input type="text" id="checkUsername" placeholder="Enter your username (e.g., john_doe)">
+                </div>
+                <button onclick="checkAccessStatus()" class="primary" style="width: 100%;">Check Access →</button>
             </div>
             
-            <div class="card">
-                <h3>SMS Service</h3>
-                <div id="smsAlert"></div>
-                <div class="form-group">
-                    <label>Phone Number:</label>
-                    <input type="text" id="phoneNumber" placeholder="09243901969">
+            <!-- Access Details (shown after checking) -->
+            <div id="accessDetails" style="display: none;">
+                <div class="card access-granted" id="grantedCard">
+                    <h2>✅ Welcome, <span id="accessUsername"></span>!</h2>
+                    <div id="permissionDetails"></div>
                 </div>
-                <div class="form-group">
-                    <label>Amount:</label>
-                    <input type="number" id="smsAmount" value="1" min="1">
+                
+                <div class="card">
+                    <h3>📱 SMS Service</h3>
+                    <div id="smsAlert"></div>
+                    <div class="form-group">
+                        <label>Phone Number:</label>
+                        <input type="text" id="phoneNumber" placeholder="09243901969">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount:</label>
+                        <input type="number" id="smsAmount" value="1" min="1">
+                    </div>
+                    <button onclick="useSmsService()" class="success" style="width: 100%;">Send SMS Bomb 📨</button>
                 </div>
-                <button onclick="useSmsService()" class="success">Send SMS Bomb</button>
+            </div>
+            
+            <div class="card" id="deniedCard" style="display: none; background: #fef5f5;">
+                <h2>⛔ Access Denied</h2>
+                <div id="deniedMessage"></div>
+                <p style="margin-top: 15px;">Please contact the administrator to request access.</p>
             </div>
         </div>
         
         <!-- Admin Panel -->
         <div id="adminPanel" class="admin-panel">
             <div class="card">
-                <h2>Admin Dashboard</h2>
+                <h2>👑 Admin Dashboard</h2>
                 <div class="grid-2">
                     <div>
                         <h3>Grant Access</h3>
@@ -277,100 +329,143 @@
             </div>
             
             <div class="card">
-                <h3>Users & Permissions</h3>
+                <h3>📊 Users & Permissions</h3>
                 <div id="usersList" class="user-list"></div>
                 <button onclick="loadUsers()" style="margin-top: 10px;">Refresh Users</button>
             </div>
             
             <div class="card">
-                <h3>Usage Logs</h3>
+                <h3>📜 Usage Logs</h3>
                 <div id="logsContent" class="logs"></div>
                 <button onclick="loadLogs()" style="margin-top: 10px;">Refresh Logs</button>
             </div>
         </div>
     </div>
     
+    <!-- Admin Login Modal -->
+    <div id="adminModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="background: white; max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 10px;">
+            <h3>Admin Login</h3>
+            <div id="modalAlert"></div>
+            <input type="text" id="adminUsername" placeholder="Username" style="margin: 10px 0;">
+            <input type="password" id="adminPassword" placeholder="Password" style="margin: 10px 0;">
+            <button onclick="adminLogin()" style="width: 100%;">Login</button>
+            <button onclick="closeAdminModal()" style="width: 100%; margin-top: 10px; background: #95a5a6;">Cancel</button>
+        </div>
+    </div>
+    
     <script>
         let currentUser = null;
+        let currentAccessData = null;
         
-        async function login() {
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
+        async function checkAccessStatus() {
+            const username = document.getElementById('checkUsername').value.trim();
             
             if (!username) {
-                showAlert('loginAlert', 'Please enter username', 'error');
+                showAlert('userAlert', 'Please enter your username', 'error');
                 return;
             }
             
+            // First, try to login as regular user (no password needed for access check)
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password: '' })
                 });
                 
                 const data = await response.json();
                 
-                if (data.success) {
-                    currentUser = { username, role: data.role };
+                if (data.success && data.role === 'user') {
+                    currentUser = { username, role: 'user' };
+                    currentAccessData = data.permission;
                     document.getElementById('usernameDisplay').textContent = username;
                     document.getElementById('logoutBtn').style.display = 'inline-block';
+                    document.getElementById('loginBtn').style.display = 'inline-block';
                     
-                    if (data.role === 'admin') {
-                        document.getElementById('loginForm').classList.remove('active');
-                        document.getElementById('adminPanel').classList.add('active');
-                        loadUsers();
-                        loadLogs();
-                    } else {
-                        document.getElementById('loginForm').classList.remove('active');
-                        document.getElementById('userPanel').classList.add('active');
-                        document.getElementById('welcomeUsername').textContent = username;
-                        checkUserAccess();
-                    }
+                    // Show access details
+                    showAccessDetails(username, data.permission);
                 } else {
-                    showAlert('loginAlert', data.message, 'error');
+                    // Access denied
+                    showDeniedMessage(data.message || 'No access permission found for this username');
                 }
             } catch (error) {
-                showAlert('loginAlert', 'Login failed', 'error');
+                showAlert('userAlert', 'Failed to check access. Please try again.', 'error');
             }
         }
         
-        async function logout() {
-            await fetch('/api/logout', { method: 'POST' });
-            currentUser = null;
-            document.getElementById('loginForm').classList.add('active');
-            document.getElementById('adminPanel').classList.remove('active');
-            document.getElementById('userPanel').classList.remove('active');
-            document.getElementById('logoutBtn').style.display = 'none';
-            document.getElementById('loginUsername').value = '';
-            document.getElementById('loginPassword').value = '';
-            showAlert('loginAlert', 'Logged out successfully', 'success');
+        function showAccessDetails(username, permission) {
+            document.getElementById('accessCheckCard').style.display = 'none';
+            document.getElementById('accessDetails').style.display = 'block';
+            document.getElementById('deniedCard').style.display = 'none';
+            document.getElementById('accessUsername').textContent = username;
+            
+            // Calculate remaining uses
+            let remainingUses = 'Unlimited';
+            let usagePercentage = 0;
+            if (permission.usage_limit !== -1) {
+                const used = permission.usage_count || 0;
+                const total = permission.usage_limit;
+                remainingUses = total - used;
+                usagePercentage = (used / total) * 100;
+            }
+            
+            // Check if expiring soon (within 2 days)
+            let expiryWarning = '';
+            if (permission.expiry_date) {
+                const expiryDate = new Date(permission.expiry_date);
+                const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+                if (daysLeft <= 2 && daysLeft > 0) {
+                    expiryWarning = `<div class="alert alert-warning" style="background: #fff3cd; color: #856404; margin-top: 10px;">
+                        ⚠️ Your access expires in ${daysLeft} day(s)!
+                    </div>`;
+                }
+            }
+            
+            const detailsHtml = `
+                <div class="alert alert-success">
+                    <strong>✅ Access Status:</strong> Active<br>
+                    <strong>📅 Duration:</strong> ${permission.duration}<br>
+                    <strong>🎯 Usage:</strong> ${permission.usage_count || 0} / ${permission.usage_limit === -1 ? 'Unlimited' : permission.usage_limit}<br>
+                    <strong>📊 Remaining:</strong> ${remainingUses} ${remainingUses !== 'Unlimited' ? 'test(s) left' : ''}<br>
+                    <strong>⏰ Expires:</strong> ${permission.expiry_date ? new Date(permission.expiry_date).toLocaleDateString() + ' ' + new Date(permission.expiry_date).toLocaleTimeString() : 'Never'}
+                </div>
+                ${permission.usage_limit !== -1 ? `
+                    <div class="usage-bar">
+                        <div class="usage-fill" style="width: ${usagePercentage}%; background: ${usagePercentage > 80 ? '#e74c3c' : '#27ae60'}">
+                            ${Math.round(usagePercentage)}% Used
+                        </div>
+                    </div>
+                ` : ''}
+                ${expiryWarning}
+            `;
+            
+            document.getElementById('permissionDetails').innerHTML = detailsHtml;
+            showAlert('userAlert', 'Access granted! You can now use the service.', 'success');
         }
         
-        async function checkUserAccess() {
-            try {
-                const response = await fetch('/api/check-access');
-                const data = await response.json();
-                
-                if (!data.hasAccess) {
-                    showAlert('accessStatus', data.message || 'No access permission', 'error');
-                } else if (data.permission) {
-                    const perm = data.permission;
-                    let statusHtml = `
-                        <strong>Access Status:</strong> Active<br>
-                        <strong>Duration:</strong> ${perm.duration}<br>
-                        <strong>Usage:</strong> ${perm.usage_count} / ${perm.usage_limit === -1 ? 'Unlimited' : perm.usage_limit}<br>
-                        <strong>Expires:</strong> ${perm.expiry_date ? new Date(perm.expiry_date).toLocaleDateString() : 'Never'}
-                    `;
-                    document.getElementById('accessStatus').innerHTML = statusHtml;
-                    document.getElementById('accessStatus').className = 'alert alert-success';
-                }
-            } catch (error) {
-                showAlert('accessStatus', 'Failed to check access', 'error');
-            }
+        function showDeniedMessage(message) {
+            document.getElementById('accessCheckCard').style.display = 'block';
+            document.getElementById('accessDetails').style.display = 'none';
+            document.getElementById('deniedCard').style.display = 'block';
+            document.getElementById('deniedMessage').innerHTML = `
+                <p style="color: #e74c3c; font-size: 18px;">${message}</p>
+                <p style="margin-top: 15px;">Possible reasons:</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>No access permission granted yet</li>
+                    <li>Your access has expired</li>
+                    <li>You've used up your allowed tests</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>How to get access:</strong> Contact the administrator with your username: <strong>${document.getElementById('checkUsername').value}</strong></p>
+            `;
         }
         
         async function useSmsService() {
+            if (!currentUser) {
+                showAlert('smsAlert', 'Please check your access first', 'error');
+                return;
+            }
+            
             const phone = document.getElementById('phoneNumber').value;
             const amount = document.getElementById('smsAmount').value;
             
@@ -379,7 +474,7 @@
                 return;
             }
             
-            showAlert('smsAlert', 'Processing...', 'info');
+            showAlert('smsAlert', 'Processing request...', 'info');
             
             try {
                 const response = await fetch('/api/use-sms-service', {
@@ -391,14 +486,80 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    showAlert('smsAlert', `Success: ${data.message}. Remaining uses: ${data.remaining_uses || 'N/A'}`, 'success');
-                    checkUserAccess(); // Refresh access status
+                    showAlert('smsAlert', `✅ Success! ${data.message}. Remaining uses: ${data.remaining_uses || 'N/A'}`, 'success');
+                    // Refresh access status
+                    setTimeout(() => {
+                        checkAccessStatus();
+                    }, 1000);
                 } else {
-                    showAlert('smsAlert', `Error: ${data.message}`, 'error');
+                    showAlert('smsAlert', `❌ Error: ${data.message}`, 'error');
+                    if (data.message.includes('expired') || data.message.includes('limit')) {
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }
                 }
             } catch (error) {
-                showAlert('smsAlert', 'Failed to use service', 'error');
+                showAlert('smsAlert', 'Failed to use service. Please try again.', 'error');
             }
+        }
+        
+        function showLoginModal() {
+            document.getElementById('adminModal').style.display = 'block';
+        }
+        
+        function closeAdminModal() {
+            document.getElementById('adminModal').style.display = 'none';
+            document.getElementById('adminUsername').value = '';
+            document.getElementById('adminPassword').value = '';
+        }
+        
+        async function adminLogin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.role === 'admin') {
+                    currentUser = { username, role: 'admin' };
+                    document.getElementById('usernameDisplay').textContent = `${username} (Admin)`;
+                    document.getElementById('logoutBtn').style.display = 'inline-block';
+                    document.getElementById('loginBtn').style.display = 'none';
+                    document.getElementById('userPanel').classList.remove('active');
+                    document.getElementById('adminPanel').classList.add('active');
+                    closeAdminModal();
+                    loadUsers();
+                    loadLogs();
+                } else {
+                    showModalAlert('Invalid admin credentials');
+                }
+            } catch (error) {
+                showModalAlert('Login failed');
+            }
+        }
+        
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            currentUser = null;
+            currentAccessData = null;
+            document.getElementById('userPanel').classList.add('active');
+            document.getElementById('adminPanel').classList.remove('active');
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('usernameDisplay').textContent = '';
+            document.getElementById('accessCheckCard').style.display = 'block';
+            document.getElementById('accessDetails').style.display = 'none';
+            document.getElementById('deniedCard').style.display = 'none';
+            document.getElementById('checkUsername').value = '';
+            document.getElementById('phoneNumber').value = '';
+            showAlert('userAlert', 'Logged out successfully', 'success');
         }
         
         async function grantAccess() {
@@ -469,11 +630,11 @@
                 if (data.success && data.users) {
                     const usersHtml = data.users.map(user => `
                         <div class="user-item">
-                            <strong>${user.username}</strong><br>
+                            <strong>👤 ${user.username}</strong><br>
                             Duration: ${user.duration || 'No access'}<br>
                             Usage: ${user.usage_count || 0} / ${user.usage_limit === -1 ? 'Unlimited' : (user.usage_limit || 0)}<br>
                             Expires: ${user.expiry_date ? new Date(user.expiry_date).toLocaleDateString() : 'N/A'}<br>
-                            Status: ${user.is_active ? '<span class="status-badge status-active">Active</span>' : '<span class="status-badge status-expired">Expired/Revoked</span>'}
+                            Status: ${user.is_active ? '<span class="status-badge status-active">✅ Active</span>' : '<span class="status-badge status-expired">❌ Expired/Revoked</span>'}
                         </div>
                     `).join('');
                     document.getElementById('usersList').innerHTML = usersHtml || '<p>No users found</p>';
@@ -506,8 +667,23 @@
             alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
             setTimeout(() => {
                 alertDiv.innerHTML = '';
+            }, 5000);
+        }
+        
+        function showModalAlert(message) {
+            const alertDiv = document.getElementById('modalAlert');
+            alertDiv.innerHTML = `<div class="alert alert-error">${message}</div>`;
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
             }, 3000);
         }
+        
+        // Press Enter key to check access
+        document.getElementById('checkUsername').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkAccessStatus();
+            }
+        });
     </script>
 </body>
 </html>
