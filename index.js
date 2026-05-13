@@ -14,10 +14,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use(session({
-  secret: 'a7f3e9c2b8d1f4a6e7c9b3d5f8a2c6e9f7a4b1c8d3e5f7a9b2c4d6e8f0a1b3c5',
+  secret: 'xK8$mN9#pQ2@vL5&wR7!tY3*zC6^bA1_',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // Set to true if using HTTPS
+  cookie: { secure: false }
 }));
 
 // Database setup
@@ -25,7 +25,6 @@ const db = new sqlite3.Database('./access.db');
 
 // Create tables
 db.serialize(() => {
-  // Users table
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -34,7 +33,6 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
   
-  // Access permissions table
   db.run(`CREATE TABLE IF NOT EXISTS access_permissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
@@ -48,7 +46,6 @@ db.serialize(() => {
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
   
-  // Usage logs table
   db.run(`CREATE TABLE IF NOT EXISTS usage_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
@@ -87,13 +84,11 @@ function checkAccess(username, callback) {
       return;
     }
     
-    // Check expiry
     if (permission.expiry_date && new Date(permission.expiry_date) < new Date()) {
       callback(false, 'Access has expired');
       return;
     }
     
-    // Check usage limit
     if (permission.usage_limit !== -1 && permission.usage_count >= permission.usage_limit) {
       callback(false, 'Usage limit exceeded');
       return;
@@ -105,32 +100,39 @@ function checkAccess(username, callback) {
 
 // API Routes
 
-// Login endpoint
-app.post('/api/login', (req, res) => {
+// User login (no password needed)
+app.post('/api/user-login', (req, res) => {
+  const { username } = req.body;
+  
+  if (!username) {
+    return res.status(400).json({ success: false, message: 'Username required' });
+  }
+  
+  checkAccess(username, (hasAccess, permission) => {
+    if (hasAccess) {
+      req.session.user = { username, role: 'user' };
+      res.json({ success: true, role: 'user', permission });
+    } else {
+      res.status(403).json({ success: false, message: permission || 'No access permission' });
+    }
+  });
+});
+
+// Admin login
+app.post('/api/admin-login', (req, res) => {
   const { username, password } = req.body;
   
-  db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
+  db.get('SELECT * FROM users WHERE username = ? AND role = "admin"', [username], (err, user) => {
     if (err || !user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
-    if (user.role === 'admin') {
-      if (!bcrypt.compareSync(password, user.password)) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      }
-      req.session.user = { username, role: 'admin' };
-      return res.json({ success: true, role: 'admin' });
+    if (!bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
-    // Regular user - check if they have access
-    checkAccess(username, (hasAccess, permission) => {
-      if (hasAccess) {
-        req.session.user = { username, role: 'user' };
-        res.json({ success: true, role: 'user', permission });
-      } else {
-        res.status(403).json({ success: false, message: permission || 'No access permission' });
-      }
-    });
+    req.session.user = { username, role: 'admin' };
+    res.json({ success: true, role: 'admin' });
   });
 });
 
@@ -160,7 +162,7 @@ app.get('/api/check-access', (req, res) => {
   });
 });
 
-// Use the SMS API (protected endpoint)
+// Use the SMS API
 app.post('/api/use-sms-service', async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ success: false, message: 'Please login first' });
@@ -172,14 +174,12 @@ app.post('/api/use-sms-service', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Phone number is required' });
   }
   
-  // Check if user has access
   checkAccess(req.session.user.username, async (hasAccess, permission) => {
     if (!hasAccess) {
       return res.status(403).json({ success: false, message: permission });
     }
     
     try {
-      // Call the external API
       const response = await axios.get('https://pasayloakomego.onrender.com/api/smsbombv2', {
         params: {
           phone: phone,
@@ -188,7 +188,6 @@ app.post('/api/use-sms-service', async (req, res) => {
         }
       });
       
-      // Update usage count
       if (permission.usage_limit !== -1) {
         db.run(`UPDATE access_permissions 
                 SET usage_count = usage_count + 1,
@@ -197,7 +196,6 @@ app.post('/api/use-sms-service', async (req, res) => {
           [req.session.user.username]);
       }
       
-      // Log usage
       db.run(`INSERT INTO usage_logs (username, action, endpoint) 
               VALUES (?, ?, ?)`, 
         [req.session.user.username, 'sms_service_used', '/api/use-sms-service']);
@@ -222,8 +220,6 @@ app.post('/api/use-sms-service', async (req, res) => {
 });
 
 // Admin Routes
-
-// Get all users with their access permissions
 app.get('/api/admin/users', (req, res) => {
   if (!req.session.user || req.session.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Admin access required' });
@@ -242,7 +238,6 @@ app.get('/api/admin/users', (req, res) => {
   });
 });
 
-// Grant or update access permission
 app.post('/api/admin/grant-access', (req, res) => {
   if (!req.session.user || req.session.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Admin access required' });
@@ -254,27 +249,22 @@ app.post('/api/admin/grant-access', (req, res) => {
     return res.status(400).json({ success: false, message: 'Username and duration required' });
   }
   
-  // Check if user exists, if not create them
   db.run(`INSERT OR IGNORE INTO users (username, role) VALUES (?, ?)`, 
     [username, 'user']);
   
-  // Convert usage_limit string to number
-  let limit = -1; // -1 means unlimited
+  let limit = -1;
   if (usage_limit === '1 test') limit = 1;
   else if (usage_limit === '2 tests') limit = 2;
   else if (usage_limit === '3 tests') limit = 3;
   else if (usage_limit === 'unlimited') limit = -1;
   
-  // Calculate expiry date
   let expiry = expiry_date;
   if (!expiry && duration !== 'lifetime') {
     expiry = calculateExpiryDate(duration);
   }
   
-  // Deactivate previous permissions
   db.run(`UPDATE access_permissions SET is_active = 0 WHERE username = ?`, [username]);
   
-  // Insert new permission
   db.run(`INSERT INTO access_permissions (username, duration, usage_limit, usage_count, expiry_date, created_by)
           VALUES (?, ?, ?, 0, ?, ?)`,
     [username, duration, limit, expiry, req.session.user.username], function(err) {
@@ -282,7 +272,6 @@ app.post('/api/admin/grant-access', (req, res) => {
       return res.status(500).json({ success: false, message: 'Failed to grant access' });
     }
     
-    // Log action
     db.run(`INSERT INTO usage_logs (username, action, endpoint) VALUES (?, ?, ?)`,
       [username, 'access_granted', '/api/admin/grant-access']);
     
@@ -290,7 +279,6 @@ app.post('/api/admin/grant-access', (req, res) => {
   });
 });
 
-// Revoke access
 app.post('/api/admin/revoke-access', (req, res) => {
   if (!req.session.user || req.session.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Admin access required' });
@@ -307,7 +295,6 @@ app.post('/api/admin/revoke-access', (req, res) => {
   });
 });
 
-// Get usage logs
 app.get('/api/admin/logs', (req, res) => {
   if (!req.session.user || req.session.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Admin access required' });
@@ -321,13 +308,23 @@ app.get('/api/admin/logs', (req, res) => {
   });
 });
 
-// Serve the main HTML file
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Serve HTML files
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/user', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'user.html'));
 });
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log('Admin login: admin / admin123');
+  console.log(`User login: http://localhost:${PORT}`);
+  console.log(`Admin panel: http://localhost:${PORT}/admin`);
+  console.log('Admin credentials: admin / admin123');
 });
