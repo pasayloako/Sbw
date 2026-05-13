@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access System - User Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 500px;
+            width: 90%;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+        
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        
+        .admin-link {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .admin-link a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .loading {
+            display: none;
+            margin: 10px 0;
+            color: #667eea;
+        }
+        
+        .info-box {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-box p {
+            color: #555;
+            font-size: 13px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🔐 Access System</h1>
+            <div class="subtitle">Enter your username to continue</div>
+            
+            <div id="alert"></div>
+            <div class="loading" id="loading">Checking access...</div>
+            
+            <input type="text" id="username" placeholder="Enter your username" autocomplete="off">
+            <button onclick="checkAccess()">Continue →</button>
+            
+            <div class="info-box">
+                <h3>ℹ️ How to get access:</h3>
+                <p>1. Contact the administrator with your username</p>
+                <p>2. Admin will grant you access with specific duration and usage limits</p>
+                <p>3. Enter your username above to check and use the service</p>
+            </div>
+            
+            <div class="admin-link">
+                <a href="/admin">Admin Panel →</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function checkAccess() {
+            const username = document.getElementById('username').value.trim();
+            
+            if (!username) {
+                showAlert('Please enter your username', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/user-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store username in session storage
+                    sessionStorage.setItem('username', username);
+                    sessionStorage.setItem('permission', JSON.stringify(data.permission));
+                    // Redirect to user dashboard
+                    window.location.href = '/user';
+                } else {
+                    showAlert(data.message || 'Access denied. Please contact administrator.', 'error');
+                    showLoading(false);
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.', 'error');
+                showLoading(false);
+            }
+        }
+        
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alert');
+            alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 5000);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        // Press Enter to submit
+        document.getElementById('username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkAccess();
+            }
+        });
+    </script>
+</body>
+</html>
