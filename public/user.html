@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        
+        button.danger {
+            background: #e74c3c;
+        }
+        
+        button.success {
+            background: #27ae60;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .usage-bar {
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        
+        .usage-fill {
+            background: #27ae60;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            transition: width 0.3s;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        h3 {
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .info-value {
+            color: #333;
+        }
+        
+        .logout-btn {
+            background: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 SMS Service</h1>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+        
+        <div class="card">
+            <h2>Welcome, <span id="username"></span>!</h2>
+            <div id="accessInfo"></div>
+        </div>
+        
+        <div class="card">
+            <h3>Send SMS</h3>
+            <div id="smsAlert"></div>
+            <input type="text" id="phoneNumber" placeholder="Phone Number (e.g., 09243901969)">
+            <input type="number" id="amount" value="1" min="1" placeholder="Amount">
+            <button onclick="sendSms()" class="success" style="width: 100%;">Send SMS Bomb 📨</button>
+        </div>
+    </div>
+    
+    <script>
+        let username = '';
+        let permission = null;
+        
+        window.onload = function() {
+            username = sessionStorage.getItem('username');
+            const permData = sessionStorage.getItem('permission');
+            
+            if (!username || !permData) {
+                window.location.href = '/';
+                return;
+            }
+            
+            permission = JSON.parse(permData);
+            document.getElementById('username').textContent = username;
+            displayAccessInfo();
+        };
+        
+        function displayAccessInfo() {
+            let remainingUses = 'Unlimited';
+            let usagePercentage = 0;
+            
+            if (permission.usage_limit !== -1) {
+                const used = permission.usage_count || 0;
+                const total = permission.usage_limit;
+                remainingUses = total - used;
+                usagePercentage = (used / total) * 100;
+            }
+            
+            const infoHtml = `
+                <div class="alert alert-success">
+                    <div class="info-row">
+                        <span class="info-label">Access Status:</span>
+                        <span class="info-value"><span class="status-badge status-active">✅ Active</span></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Duration:</span>
+                        <span class="info-value">${permission.duration}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Usage:</span>
+                        <span class="info-value">${permission.usage_count || 0} / ${permission.usage_limit === -1 ? 'Unlimited' : permission.usage_limit}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Remaining:</span>
+                        <span class="info-value"><strong>${remainingUses}</strong> ${remainingUses !== 'Unlimited' ? 'test(s) left' : ''}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Expires:</span>
+                        <span class="info-value">${permission.expiry_date ? new Date(permission.expiry_date).toLocaleString() : 'Never'}</span>
+                    </div>
+                </div>
+                ${permission.usage_limit !== -1 ? `
+                    <div class="usage-bar">
+                        <div class="usage-fill" style="width: ${usagePercentage}%; background: ${usagePercentage > 80 ? '#e74c3c' : '#27ae60'}">
+                            ${Math.round(usagePercentage)}% Used
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('accessInfo').innerHTML = infoHtml;
+        }
+        
+        async function sendSms() {
+            const phone = document.getElementById('phoneNumber').value;
+            const amount = document.getElementById('amount').value;
+            
+            if (!phone) {
+                showAlert('smsAlert', 'Please enter phone number', 'error');
+                return;
+            }
+            
+            showAlert('smsAlert', 'Sending SMS bomb... Please wait.', 'info');
+            
+            try {
+                const response = await fetch('/api/use-sms-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, amount: parseInt(amount) })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('smsAlert', `✅ Success! ${data.message}. Remaining uses: ${data.remaining_uses}`, 'success');
+                    // Update permission usage
+                    if (permission.usage_limit !== -1) {
+                        permission.usage_count++;
+                        sessionStorage.setItem('permission', JSON.stringify(permission));
+                        displayAccessInfo();
+                    }
+                    document.getElementById('phoneNumber').value = '';
+                } else {
+                    showAlert('smsAlert', `❌ Error: ${data.message}`, 'error');
+                    if (data.message.includes('expired') || data.message.includes('limit')) {
+                        setTimeout(() => {
+                            logout();
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                showAlert('smsAlert', 'Failed to send. Please try again.', 'error');
+            }
+        }
+        
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            sessionStorage.clear();
+            window.location.href = '/';
+        }
+        
+        function showAlert(elementId, message, type) {
+            const alertDiv = document.getElementById(elementId);
+            alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
