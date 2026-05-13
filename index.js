@@ -55,7 +55,7 @@ db.serialize(() => {
   )`);
   
   // Create default admin user (password: admin123)
-  const hashedPassword = bcrypt.hashSync('admin123', 10);
+  const hashedPassword = bcrypt.hashSync('selovasx2024', 10);
   db.run(`INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)`, 
     ['admin', hashedPassword, 'admin']);
 });
@@ -180,7 +180,7 @@ app.post('/api/use-sms-service', async (req, res) => {
     }
     
     try {
-      const response = await axios.get('https://pasayloakomego.onrender.com/api/smsbombv2', {
+      const response = await axios.get('https://pasayloakomego-v4rh.onrender.com/api/smsbombv2', {
         params: {
           phone: phone,
           amount: amount,
