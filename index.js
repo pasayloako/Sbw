@@ -180,7 +180,7 @@ app.post('/api/use-sms-service', async (req, res) => {
     }
     
     try {
-      const response = await axios.get('https://pasayloakomego-v4rh.onrender.com/api/smsbombv2', {
+      const response = await axios.get('https://selovapi.onrender.com/api/smsbombv2', {
         params: {
           phone: phone,
           amount: amount,
